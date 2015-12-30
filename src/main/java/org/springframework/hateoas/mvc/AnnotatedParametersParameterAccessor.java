@@ -16,8 +16,11 @@
 package org.springframework.hateoas.mvc;
 
 import java.lang.annotation.Annotation;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.core.MethodParameter;
 import org.springframework.core.convert.ConversionService;
@@ -38,6 +41,7 @@ import org.springframework.web.util.UriTemplate;
 class AnnotatedParametersParameterAccessor {
 
 	private final AnnotationAttribute attribute;
+	private Map<Method, List<MethodParameter>> parametersCache = new HashMap<Method, List<MethodParameter>>();
 
 	/**
 	 * Creates a new {@link AnnotatedParametersParameterAccessor} using the given {@link AnnotationAttribute}.
@@ -54,17 +58,17 @@ class AnnotatedParametersParameterAccessor {
 	 * Returns {@link BoundMethodParameter}s contained in the given {@link MethodInvocation}.
 	 * 
 	 * @param invocation must not be {@literal null}.
-	 * @return
 	 */
 	public List<BoundMethodParameter> getBoundParameters(MethodInvocation invocation) {
 
 		Assert.notNull(invocation, "MethodInvocation must not be null!");
 
-		MethodParameters parameters = new MethodParameters(invocation.getMethod());
+		List<MethodParameter> parametersWithAnnotation = getMethodParameters(invocation.getMethod());
+
 		Object[] arguments = invocation.getArguments();
 		List<BoundMethodParameter> result = new ArrayList<BoundMethodParameter>();
 
-		for (MethodParameter parameter : parameters.getParametersWith(attribute.getAnnotationType())) {
+		for (MethodParameter parameter : parametersWithAnnotation) {
 
 			Object value = arguments[parameter.getParameterIndex()];
 			Object verifiedValue = verifyParameterValue(parameter, value);
@@ -75,6 +79,17 @@ class AnnotatedParametersParameterAccessor {
 		}
 
 		return result;
+	}
+
+	private List<MethodParameter> getMethodParameters(Method method) {
+		if (parametersCache.containsKey(method)) {
+			return parametersCache.get(method);
+		} else {
+			MethodParameters parameters = new MethodParameters(method);
+			List<MethodParameter> parametersWithAnnotation = parameters.getParametersWith(attribute.getAnnotationType());
+			parametersCache.put(method, parametersWithAnnotation);
+			return parametersWithAnnotation;
+		}
 	}
 
 	/**

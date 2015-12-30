@@ -47,6 +47,7 @@ public class ControllerLinkBuilder extends LinkBuilderSupport<ControllerLinkBuil
 
 	private static final MappingDiscoverer DISCOVERER = new AnnotationMappingDiscoverer(RequestMapping.class);
 	private static final ControllerLinkBuilderFactory FACTORY = new ControllerLinkBuilderFactory();
+	public static final String CACHE_KEY = ControllerLinkBuilder.class.getName() + "#BUILDER_CACHE";
 
 	/**
 	 * Creates a new {@link ControllerLinkBuilder} using the given {@link UriComponentsBuilder}.
@@ -55,6 +56,9 @@ public class ControllerLinkBuilder extends LinkBuilderSupport<ControllerLinkBuil
 	 */
 	ControllerLinkBuilder(UriComponentsBuilder builder) {
 		super(builder);
+	}
+	ControllerLinkBuilder(UriComponents uriComponents) {
+		super(uriComponents);
 	}
 
 	/**
@@ -175,15 +179,25 @@ public class ControllerLinkBuilder extends LinkBuilderSupport<ControllerLinkBuil
 		return UriComponentsBuilder.fromUri(toUri());
 	}
 
+	static UriComponentsBuilder getBuilder() {
+		URI baseUri = getCachedBaseUri();
+		if (baseUri == null) {
+			UriComponentsBuilder builderFromRequest = createBuilderFromRequest();
+			cacheBaseUri(builderFromRequest.build().toUri());
+			return builderFromRequest;
+		} else {
+			return UriComponentsBuilder.fromUri(baseUri);
+		}
+	}
+
 	/**
 	 * Returns a {@link UriComponentsBuilder} obtained from the current servlet mapping with the host tweaked in case the
 	 * request contains an {@code X-Forwarded-Host} header and the scheme tweaked in case the request contains an
 	 * {@code X-Forwarded-Ssl} header
-	 * 
+	 *
 	 * @return
 	 */
-	static UriComponentsBuilder getBuilder() {
-
+	private static UriComponentsBuilder createBuilderFromRequest() {
 		HttpServletRequest request = getCurrentRequest();
 		ServletUriComponentsBuilder builder = ServletUriComponentsBuilder.fromServletMapping(request);
 
@@ -235,12 +249,24 @@ public class ControllerLinkBuilder extends LinkBuilderSupport<ControllerLinkBuil
 	 */
 	@SuppressWarnings("null")
 	private static HttpServletRequest getCurrentRequest() {
-
-		RequestAttributes requestAttributes = RequestContextHolder.getRequestAttributes();
-		Assert.state(requestAttributes != null, "Could not find current request via RequestContextHolder");
+		RequestAttributes requestAttributes = getRequestAttributes();
 		Assert.isInstanceOf(ServletRequestAttributes.class, requestAttributes);
 		HttpServletRequest servletRequest = ((ServletRequestAttributes) requestAttributes).getRequest();
 		Assert.state(servletRequest != null, "Could not find current HttpServletRequest");
 		return servletRequest;
+	}
+
+	private static RequestAttributes getRequestAttributes() {
+		RequestAttributes requestAttributes = RequestContextHolder.getRequestAttributes();
+		Assert.state(requestAttributes != null, "Could not find current request via RequestContextHolder");
+		return requestAttributes;
+	}
+
+	private static void cacheBaseUri(URI uri) {
+		getRequestAttributes().setAttribute(CACHE_KEY, uri, RequestAttributes.SCOPE_REQUEST);
+	}
+
+	private static URI getCachedBaseUri() {
+		return (URI) getRequestAttributes().getAttribute(CACHE_KEY, RequestAttributes.SCOPE_REQUEST);
 	}
 }
