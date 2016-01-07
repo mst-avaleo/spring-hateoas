@@ -1,11 +1,11 @@
 package org.springframework.hateoas.core;
 
 import java.lang.reflect.Method;
-import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class CachingMappingDiscoverer implements MappingDiscoverer {
-	private Map<String, String> mappingCache = new HashMap<String, String>();
+	private Map<String, String> mappingCache = new ConcurrentHashMap<String, String>();
 	private MappingDiscoverer discoverer;
 
 	public CachingMappingDiscoverer(MappingDiscoverer discoverer) {

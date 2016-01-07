@@ -18,9 +18,9 @@ package org.springframework.hateoas.mvc;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.springframework.core.MethodParameter;
 import org.springframework.core.convert.ConversionService;
@@ -41,7 +41,7 @@ import org.springframework.web.util.UriTemplate;
 class AnnotatedParametersParameterAccessor {
 
 	private final AnnotationAttribute attribute;
-	private Map<Method, List<MethodParameter>> parametersCache = new HashMap<Method, List<MethodParameter>>();
+	private Map<Method, List<MethodParameter>> parametersCache = new ConcurrentHashMap<Method, List<MethodParameter>>();
 
 	/**
 	 * Creates a new {@link AnnotatedParametersParameterAccessor} using the given {@link AnnotationAttribute}.
