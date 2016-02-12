@@ -190,6 +190,18 @@ public class ControllerLinkBuilder extends LinkBuilderSupport<ControllerLinkBuil
 		}
 	}
 
+	static URI getBaseUri() {
+		URI baseUri = getCachedBaseUri();
+		if (baseUri == null) {
+			UriComponentsBuilder builderFromRequest = createBuilderFromRequest();
+			URI uri = builderFromRequest.build().toUri();
+			cacheBaseUri(uri);
+			return uri;
+		} else {
+			return baseUri;
+		}
+	}
+
 	/**
 	 * Returns a {@link UriComponentsBuilder} obtained from the current servlet mapping with the host tweaked in case the
 	 * request contains an {@code X-Forwarded-Host} header and the scheme tweaked in case the request contains an

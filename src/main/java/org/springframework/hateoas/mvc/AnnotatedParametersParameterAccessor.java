@@ -54,6 +54,20 @@ class AnnotatedParametersParameterAccessor {
 		this.attribute = attribute;
 	}
 
+	public List<BoundMethodParameter> getBoundParameters(Method method) {
+
+		Assert.notNull(method, "Method must not be null!");
+
+		List<MethodParameter> parametersWithAnnotation = getMethodParameters(method);
+
+		List<BoundMethodParameter> result = new ArrayList<BoundMethodParameter>();
+		for (MethodParameter parameter : parametersWithAnnotation) {
+			result.add(new BoundMethodParameter(parameter, null, attribute));
+		}
+
+		return result;
+	}
+
 	/**
 	 * Returns {@link BoundMethodParameter}s contained in the given {@link MethodInvocation}.
 	 * 
@@ -145,6 +159,10 @@ class AnnotatedParametersParameterAccessor {
 			this.value = value;
 			this.attribute = attribute;
 			this.parameterTypeDecsriptor = TypeDescriptor.nested(parameter, 0);
+		}
+
+		public MethodParameter getParameter() {
+			return parameter;
 		}
 
 		/**
