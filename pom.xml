@@ -68,7 +68,7 @@
 		<slf4j.version>1.7.10</slf4j.version>
 		<evo.version>1.2.1</evo.version>
 		<bundlor.failOnWarnings>true</bundlor.failOnWarnings>
-		<source.level>1.6</source.level>
+		<source.level>1.7</source.level>
 	</properties>
 
 	<profiles>
@@ -608,6 +608,7 @@
 				<configuration>
 					<source>${source.level}</source>
 					<target>${source.level}</target>
+					<debug>true</debug>
 				</configuration>
 			</plugin>
 

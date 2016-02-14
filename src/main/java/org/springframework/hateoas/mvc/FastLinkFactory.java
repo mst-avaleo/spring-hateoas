@@ -2,16 +2,20 @@ package org.springframework.hateoas.mvc;
 
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import org.springframework.core.MethodParameter;
+import org.springframework.core.convert.TypeDescriptor;
 import org.springframework.hateoas.core.AnnotationAttribute;
 import org.springframework.hateoas.core.AnnotationMappingDiscoverer;
 import org.springframework.hateoas.core.CachingMappingDiscoverer;
 import org.springframework.hateoas.core.DummyInvocationUtils;
 import org.springframework.hateoas.core.MappingDiscoverer;
+import org.springframework.hateoas.mvc.FastLinkTemplate.MethodArgumentAccessor;
+import org.springframework.hateoas.mvc.FastLinkTemplate.Type;
 import org.springframework.hateoas.mvc.FastLinks.LastInvocationHolder;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -60,13 +64,11 @@ public class FastLinkFactory {
 				pathComponents.add(new FastLinkTemplate.StaticPartPathComponent(mapping.substring(startFrom, idx)));
 			}
 			if (objectParametersUsed < objectParameters.size()) {
-				FastLinkTemplate.ObjectParameterAccessor paramAccessor = new FastLinkTemplate.ObjectParameterAccessor(objectParametersUsed);
-				pathComponents.add(new FastLinkTemplate.ParameterPathComponent(paramAccessor));
+				pathComponents.add(buildObjectParameterComponent(objectParametersUsed));
 				objectParametersUsed++;
 			} else if (pathParamNames.containsKey(variableName)) {
-				MethodParameter methodParameter = pathParamNames.get(variableName).getParameter();
-				FastLinkTemplate.MethodArgumentAccessor paramAccessor = new FastLinkTemplate.MethodArgumentAccessor(methodParameter.getParameterIndex());
-				pathComponents.add(new FastLinkTemplate.ParameterPathComponent(paramAccessor));
+				AnnotatedParametersParameterAccessor.BoundMethodParameter boundMethodParameter = pathParamNames.get(variableName);
+				pathComponents.add(buildMethodArgumentParameterComponent(boundMethodParameter));
 			} else {
 				throw new IllegalStateException("Variable from mapping not found: "  + variableName);
 			}
@@ -80,13 +82,59 @@ public class FastLinkFactory {
 		return pathComponents;
 	}
 
+	private FastLinkTemplate.ParameterPathComponent buildObjectParameterComponent(int objectParametersUsed) {
+		FastLinkTemplate.ObjectParameterAccessor paramAccessor = new FastLinkTemplate.ObjectParameterAccessor(objectParametersUsed);
+		return new FastLinkTemplate.ParameterPathComponent(paramAccessor);
+	}
+
+	private FastLinkTemplate.ParameterPathComponent buildMethodArgumentParameterComponent(AnnotatedParametersParameterAccessor.BoundMethodParameter boundMethodParameter) {
+		MethodParameter methodParameter = boundMethodParameter.getParameter();
+		FastLinkTemplate.Encoder encoder = buildValueEncoder(methodParameter, Type.PATH_SEGMENT);
+		MethodArgumentAccessor paramAccessor = new MethodArgumentAccessor(methodParameter.getParameterIndex());
+		return new FastLinkTemplate.ParameterPathComponent(paramAccessor, encoder);
+	}
+
+	private FastLinkTemplate.Encoder buildValueEncoder(MethodParameter methodParameter, Type segmentType) {
+		Class<?> parameterType = methodParameter.getParameterType();
+		if (isSimpleType(parameterType)) {
+			return new FastLinkTemplate.ToStringValueEncoder(segmentType);
+		} else if (isNotSupportedType(parameterType)) {
+			return new FastLinkTemplate.NotSupportedEncoder();
+		} else {
+			return new FastLinkTemplate.ConversionServiceEncoder(segmentType,
+					TypeDescriptor.nested(methodParameter, 0));
+		}
+	}
+
+	private boolean isSimpleType(Class<?> parameterType) {
+		return String.class.isAssignableFrom(parameterType)
+				|| Enum.class.isAssignableFrom(parameterType)
+				|| parameterType.isEnum()
+				|| Collection.class.isAssignableFrom(parameterType)
+				|| parameterType.isArray()
+				|| Boolean.class.isAssignableFrom(parameterType)
+				|| boolean.class.isAssignableFrom(parameterType)
+				|| Integer.class.isAssignableFrom(parameterType)
+				|| int.class.isAssignableFrom(parameterType)
+				|| Long.class.isAssignableFrom(parameterType)
+				|| long.class.isAssignableFrom(parameterType)
+				;
+	}
+
+	private boolean isNotSupportedType(Class<?> parameterType) {
+		return Map.class.isAssignableFrom(parameterType);
+	}
+
 	protected List<FastLinkTemplate.Component> buildQueryComponents(UriTemplate template, List<AnnotatedParametersParameterAccessor.BoundMethodParameter> queryParameters) {
 		List<String> variableNames = template.getVariableNames();
 
 		List<FastLinkTemplate.Component> queryComponents = new ArrayList<FastLinkTemplate.Component>(variableNames.size() * 2);
 		for(AnnotatedParametersParameterAccessor.BoundMethodParameter parameter: queryParameters) {
+			MethodParameter methodParameter = parameter.getParameter();
+			MethodArgumentAccessor paramAccessor = new MethodArgumentAccessor(methodParameter.getParameterIndex());
+			FastLinkTemplate.Encoder encoder = buildValueEncoder(methodParameter, Type.QUERY_PARAM);
 			queryComponents.add(new FastLinkTemplate.QueryParamComponent(parameter.getVariableName(),
-					parameter.getParameter().getParameterIndex()));
+					paramAccessor, encoder));
 		}
 
 		return queryComponents;

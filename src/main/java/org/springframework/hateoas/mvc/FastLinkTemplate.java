@@ -5,10 +5,13 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 
+import org.springframework.core.convert.ConversionService;
+import org.springframework.core.convert.TypeDescriptor;
+import org.springframework.format.support.DefaultFormattingConversionService;
 import org.springframework.hateoas.mvc.FastLinks.LastInvocationHolder;
 
 class FastLinkTemplate {
-	private enum Type {
+	enum Type {
 		PATH_SEGMENT {
 			@Override
 			public boolean isAllowed(int c) {
@@ -21,7 +24,7 @@ class FastLinkTemplate {
 				if ('=' == c || '+' == c || '&' == c) {
 					return false;
 				} else {
-					return isPchar(c) || '/' == c || '?' == c;
+					return isPchar(c) || '/' == c || '?' == c || '%' == c;
 				}
 			}
 		};
@@ -85,7 +88,7 @@ class FastLinkTemplate {
 		}
 	}
 
-	private interface Encoder {
+	interface Encoder {
 		String encode(Object par);
 	}
 
@@ -129,10 +132,10 @@ class FastLinkTemplate {
 		}
 	}
 
-	private static class ValueEncoder implements Encoder {
+	static class ToStringValueEncoder implements Encoder {
 		private Type type;
 
-		public ValueEncoder(Type type) {
+		public ToStringValueEncoder(Type type) {
 			this.type = type;
 		}
 
@@ -145,6 +148,10 @@ class FastLinkTemplate {
 		protected String toString(Object par) {
 			if (par instanceof Collection) {
 				return toString((Collection<Object>) par);
+			} else if (par.getClass().isArray()) {
+				return toString((Object[]) par);
+			} else if (par instanceof Enum) {
+				return ((Enum)par).name();
 			} else {
 				return par.toString();
 			}
@@ -154,8 +161,19 @@ class FastLinkTemplate {
 			StringBuilder buf = new StringBuilder();
 			for(Iterator<Object> i = collection.iterator(); i.hasNext() ;) {
 				Object element = i.next();
-				buf.append(element.toString());
+				buf.append(toString(element));
 				if (i.hasNext()) {
+					buf.append(",");
+				}
+			}
+			return buf.toString();
+		}
+
+		private String toString(Object[] array) {
+			StringBuilder buf = new StringBuilder();
+			for(int i = 0; i < array.length; i++) {
+				buf.append(toString(array[i]));
+				if (i + 1 < array.length) {
 					buf.append(",");
 				}
 			}
@@ -166,6 +184,49 @@ class FastLinkTemplate {
 			if (!type.isAllowed(value)) {
 				throw new IllegalArgumentException("The value contains not allowed characters: " + value);
 			}
+		}
+	}
+
+	static class ConversionServiceEncoder implements Encoder {
+		private static final ConversionService CONVERSION_SERVICE = new DefaultFormattingConversionService();
+		private static final TypeDescriptor STRING_DESCRIPTOR = TypeDescriptor.valueOf(String.class);
+
+		private Type type;
+		private TypeDescriptor parameterTypeDescriptor;
+
+		public ConversionServiceEncoder(Type type, TypeDescriptor parameterTypeDescriptor) {
+			this.type = type;
+			this.parameterTypeDescriptor = parameterTypeDescriptor;
+		}
+
+		public String encode(Object value) {
+			if (value == null) {
+				return null;
+			}
+
+			String result = (String) CONVERSION_SERVICE.convert(value, parameterTypeDescriptor, STRING_DESCRIPTOR);
+			verify(result);
+			return result;
+		}
+
+		protected void verify(String value) {
+			if (!type.isAllowed(value)) {
+				throw new IllegalArgumentException("The value contains not allowed characters: " + value);
+			}
+		}
+	}
+
+	static class NotSupportedEncoder implements Encoder {
+
+		public NotSupportedEncoder() {
+		}
+
+		public String encode(Object value) {
+			if (value == null) {
+				return null;
+			}
+
+			throw new IllegalArgumentException("Encoding links with such parameters is not supported: " + value.getClass());
 		}
 	}
 
@@ -191,7 +252,10 @@ class FastLinkTemplate {
 		private ParamAccessor paramAccessor;
 
 		public ParameterPathComponent(ParamAccessor paramAccessor) {
-			super(new ValueEncoder(Type.PATH_SEGMENT));
+			this(paramAccessor, new ToStringValueEncoder(Type.PATH_SEGMENT));
+		}
+		public ParameterPathComponent(ParamAccessor paramAccessor, Encoder encoder) {
+			super(encoder);
 			this.paramAccessor = paramAccessor;
 		}
 
@@ -211,7 +275,7 @@ class FastLinkTemplate {
 		private String part;
 
 		public StaticPartPathComponent(String part) {
-			super(new ValueEncoder(Type.PATH_SEGMENT));
+			super(new ToStringValueEncoder(Type.PATH_SEGMENT));
 			this.part = part;
 		}
 
@@ -226,23 +290,53 @@ class FastLinkTemplate {
 		private String paramName;
 		private ParamAccessor paramAccessor;
 
-		public QueryParamComponent(String paramName, int idx) {
-			super(new ValueEncoder(Type.QUERY_PARAM));
+		public QueryParamComponent(String paramName, MethodArgumentAccessor paramAccessor, Encoder encoder) {
+			super(encoder);
 			this.paramName = paramName;
-			this.paramAccessor = new MethodArgumentAccessor(idx);
+			this.paramAccessor = paramAccessor;
 		}
 
 		@Override
 		public boolean doAppend(StringBuilder buf, LastInvocationHolder invocation) {
 			Object paramValue = paramAccessor.getParam(invocation);
 
-			if (paramValue != null) {
-				String paramValueEncoded = encode(paramValue);
-				buf.append(paramName).append("=").append(paramValueEncoded);
-				return true;
-			} else {
+			if (paramValue == null) {
 				return false;
 			}
+
+			if (paramValue instanceof Collection) {
+				appendCollection(buf, (Collection<Object>) paramValue);
+			} else if (paramValue.getClass().isArray()) {
+				appendArray(buf, (Object[])paramValue);
+			} else {
+				appendValue(buf, paramValue);
+			}
+
+			return true;
+		}
+
+		private void appendCollection(StringBuilder buf, Collection<Object> paramValue) {
+			for(Iterator<Object> i = paramValue.iterator(); i.hasNext() ;) {
+				Object element = i.next();
+				appendValue(buf, element);
+				if (i.hasNext()) {
+					buf.append("&");
+				}
+			}
+		}
+
+		private void appendArray(StringBuilder buf, Object[] array) {
+			for(int i = 0; i < array.length; i++) {
+				appendValue(buf, array[i]);
+				if (i + 1 < array.length) {
+					buf.append("&");
+				}
+			}
+		}
+
+		private void appendValue(StringBuilder buf, Object paramValue) {
+			String paramValueEncoded = encode(paramValue);
+			buf.append(paramName).append("=").append(paramValueEncoded);
 		}
 	}
 
