@@ -305,14 +305,17 @@ class FastLinkTemplate {
 			}
 
 			if (paramValue instanceof Collection) {
-				appendCollection(buf, (Collection<Object>) paramValue);
+				Collection<Object> collection = (Collection<Object>) paramValue;
+				appendCollection(buf, collection);
+				return !collection.isEmpty();
 			} else if (paramValue.getClass().isArray()) {
-				appendArray(buf, (Object[])paramValue);
+				Object[] array = (Object[]) paramValue;
+				appendArray(buf, array);
+				return array.length != 0;
 			} else {
 				appendValue(buf, paramValue);
+				return true;
 			}
-
-			return true;
 		}
 
 		private void appendCollection(StringBuilder buf, Collection<Object> paramValue) {

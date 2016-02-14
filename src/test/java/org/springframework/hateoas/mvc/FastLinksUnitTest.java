@@ -20,6 +20,7 @@ import static org.hamcrest.Matchers.startsWith;
 import static org.junit.Assert.assertThat;
 import static org.springframework.hateoas.mvc.ControllerLinkBuilder.methodOn;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.LinkedHashMap;
@@ -114,7 +115,14 @@ public class FastLinksUnitTest extends TestUtils {
 		List<Long> idList = Arrays.asList(2L, 3L, 4L);
 		String link = FastLinks.linkTo(methodOn(SampleController.class).listParam(1L, idList));
 
-		assertThat(link, endsWith("/sample/1?ids=2&ids=3&ids=4"));
+		assertThat(link, endsWith("/sample/list?id=1&ids=2&ids=3&ids=4"));
+	}
+
+	@Test
+	public void emptyListParameters() {
+		String link = FastLinks.linkTo(methodOn(SampleController.class).listParam(1L, new ArrayList<Long>()));
+
+		assertThat(link, endsWith("/sample/list?id=1"));
 	}
 
 	@Test
@@ -122,7 +130,14 @@ public class FastLinksUnitTest extends TestUtils {
 		Long[] idList = new Long[] {2L, 3L, 4L};
 		String link = FastLinks.linkTo(methodOn(SampleController.class).arrayParam(1L, idList));
 
-		assertThat(link, endsWith("/sample/1?ids=2&ids=3&ids=4"));
+		assertThat(link, endsWith("/sample/array?id=1&ids=2&ids=3&ids=4"));
+	}
+
+	@Test
+	public void emptyArrayParameters() {
+		String link = FastLinks.linkTo(methodOn(SampleController.class).arrayParam(1L, new Long[0]));
+
+		assertThat(link, endsWith("/sample/array?id=1"));
 	}
 
 	@Test
@@ -169,11 +184,11 @@ public class FastLinksUnitTest extends TestUtils {
 
 	static interface SampleController {
 
-		@RequestMapping("/sample/{id}")
-		HttpEntity<?> listParam(@PathVariable("id") Long id, @RequestParam("ids") List<Long> ids);
+		@RequestMapping("/sample/list")
+		HttpEntity<?> listParam(@RequestParam("id") Long id, @RequestParam("ids") List<Long> ids);
 
-		@RequestMapping("/sample/{id}")
-		HttpEntity<?> arrayParam(@PathVariable("id") Long id, @RequestParam("ids") Long[] ids);
+		@RequestMapping("/sample/array")
+		HttpEntity<?> arrayParam(@RequestParam("id") Long id, @RequestParam("ids") Long[] ids);
 
 		@RequestMapping("/sample/{id}")
 		HttpEntity<?> arrayParam(@PathVariable("id") Long id, @RequestParam("values") TestEnum[] values);
