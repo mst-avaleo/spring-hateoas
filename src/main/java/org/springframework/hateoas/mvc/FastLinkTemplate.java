@@ -1,14 +1,14 @@
 package org.springframework.hateoas.mvc;
 
-import java.net.URI;
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.List;
-
 import org.springframework.core.convert.ConversionService;
 import org.springframework.core.convert.TypeDescriptor;
 import org.springframework.format.support.DefaultFormattingConversionService;
 import org.springframework.hateoas.mvc.FastLinks.LastInvocationHolder;
+
+import java.net.URI;
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.List;
 
 class FastLinkTemplate {
 	enum Type {
@@ -21,7 +21,7 @@ class FastLinkTemplate {
 		QUERY_PARAM {
 			@Override
 			public boolean isAllowed(int c) {
-				if ('=' == c || '+' == c || '&' == c) {
+				if ('=' == c || '&' == c) {
 					return false;
 				} else {
 					return isPchar(c) || '/' == c || '?' == c || '%' == c;
