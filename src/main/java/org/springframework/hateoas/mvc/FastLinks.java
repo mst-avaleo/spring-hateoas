@@ -9,7 +9,7 @@ import org.springframework.hateoas.core.DummyInvocationUtils.MethodInvocation;
 import org.springframework.util.Assert;
 
 public class FastLinks {
-	private static FastLinkCachingFactory linkFactory = new FastLinkCachingFactory();
+	private static FastLinkTemplateCachingFactory LINK_FACTORY = new FastLinkTemplateCachingFactory();
 
 	/**
 	 * Simple bean for storing last invocation but without proxy overhead.
@@ -44,7 +44,7 @@ public class FastLinks {
 		Assert.isInstanceOf(LastInvocationAware.class, invocationValue);
 		LastInvocationHolder invocations = new LastInvocationHolder((LastInvocationAware) invocationValue);
 
-		FastLinkTemplate linkTemplate = linkFactory.createLinkTemplate(invocations);
+		FastLinkTemplate linkTemplate = LINK_FACTORY.createLinkTemplate(invocations);
 		return linkTemplate.build(invocations);
 	}
 

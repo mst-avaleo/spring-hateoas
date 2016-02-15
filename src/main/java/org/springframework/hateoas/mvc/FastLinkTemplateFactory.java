@@ -22,7 +22,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.util.UriTemplate;
 
-public class FastLinkFactory {
+public class FastLinkTemplateFactory {
 	private static final MappingDiscoverer DISCOVERER = new CachingMappingDiscoverer(
 			new AnnotationMappingDiscoverer(RequestMapping.class));
 	private static final AnnotatedParametersParameterAccessor PATH_VARIABLE_ACCESSOR = new AnnotatedParametersParameterAccessor(

@@ -31,6 +31,7 @@ import org.joda.time.DateMidnight;
 import org.joda.time.DateTime;
 import org.joda.time.LocalDate;
 import org.joda.time.format.ISODateTimeFormat;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.hateoas.TestUtils;
@@ -98,6 +99,7 @@ public class FastLinksUnitTest extends TestUtils {
 	}
 
 	@Test
+	@Ignore
 	public void noParamNames() {
 		String link = FastLinks.linkTo(methodOn(SampleController.class).noParamNames(1L, 2L, 3L));
 		assertThat(link, endsWith("/sample/2/1?id3=3"));
