@@ -15,18 +15,6 @@
  */
 package org.springframework.hateoas.mvc;
 
-import static org.hamcrest.Matchers.endsWith;
-import static org.hamcrest.Matchers.startsWith;
-import static org.junit.Assert.assertThat;
-import static org.springframework.hateoas.mvc.ControllerLinkBuilder.methodOn;
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Date;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-
 import org.joda.time.DateMidnight;
 import org.joda.time.DateTime;
 import org.joda.time.LocalDate;
@@ -42,6 +30,13 @@ import org.springframework.util.MultiValueMap;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+
+import java.util.*;
+
+import static org.hamcrest.Matchers.endsWith;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThat;
+import static org.springframework.hateoas.mvc.ControllerLinkBuilder.methodOn;
 
 public class FastLinksUnitTest extends TestUtils {
 
@@ -180,11 +175,22 @@ public class FastLinksUnitTest extends TestUtils {
 		assertThat(link, endsWith("/sample/multivaluemapsupport"));
 	}
 
-	protected void assertPointsToMockServer(String link) {
-		assertThat(link, startsWith("http://localhost"));
+	@Test
+	public void subclassing() {
+		String link1 = FastLinks.linkTo(methodOn(SampleController.class).sampleMethodWithMultimap(null));
+		String link2 = FastLinks.linkTo(methodOn(SampleSubController.class).sampleMethodWithMultimap(null));
+		assertThat(link1, endsWith("/sample/multivaluemapsupport"));
+		assertThat(link2, endsWith("/sub/sample/multivaluemapsupport"));
 	}
 
-	static interface SampleController {
+	@Test
+	public void linkContainsHostAndObjectParams() {
+		String link = FastLinks.linkTo(methodOn(ObjectParamController.class, "objectParam").sampleMethodTime(1L));
+
+		assertEquals("http://localhost/objectParam/sample/1", link);
+	}
+
+	interface SampleController {
 
 		@RequestMapping("/sample/list")
 		HttpEntity<?> listParam(@RequestParam("id") Long id, @RequestParam("ids") List<Long> ids);
@@ -227,6 +233,17 @@ public class FastLinksUnitTest extends TestUtils {
 
 		@RequestMapping("/sample/multivaluemapsupport")
 		HttpEntity<?> sampleMethodWithMultimap(@RequestParam MultiValueMap<String, String> queryParams);
+	}
+
+	@RequestMapping("/sub")
+	interface SampleSubController extends SampleController {
+	}
+
+	@RequestMapping("/{context}")
+	interface ObjectParamController  {
+		@RequestMapping("/sample/{id}")
+		HttpEntity<?> sampleMethodTime(@PathVariable("id") Long id);
+
 	}
 
 	enum TestEnum {
