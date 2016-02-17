@@ -30,7 +30,9 @@ import org.springframework.util.MultiValueMap;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.util.UriUtils;
 
+import java.io.UnsupportedEncodingException;
 import java.util.*;
 
 import static org.hamcrest.Matchers.endsWith;
@@ -39,6 +41,14 @@ import static org.junit.Assert.assertThat;
 import static org.springframework.hateoas.mvc.ControllerLinkBuilder.methodOn;
 
 public class FastLinksUnitTest extends TestUtils {
+
+	@Test
+	public void encodedParams() throws UnsupportedEncodingException {
+		String encodedRequestParam = UriUtils.encodeQueryParam("/ =", "UTF-8");
+		String encodedPathParam = UriUtils.encodePathSegment("/ =", "UTF-8");
+		String link = FastLinks.linkTo(methodOn(SampleController.class).encodedParams(encodedPathParam, encodedRequestParam));
+		assertThat(link, endsWith("/sample/" + encodedPathParam + "?value2="+encodedRequestParam));
+	}
 
 	@Test
 	public void dateMidnightParams() {
@@ -227,6 +237,9 @@ public class FastLinksUnitTest extends TestUtils {
 
 		@RequestMapping("/sample/{id2}/{id1}")
 		HttpEntity<?> noParamNames(@PathVariable Long id1, @PathVariable Long id2, @RequestParam Long id3);
+
+		@RequestMapping("/sample/{value1}")
+		HttpEntity<?> encodedParams(@PathVariable("value1") String value1, @RequestParam("value2") String value2);
 
 		@RequestMapping("/sample/mapsupport")
 		HttpEntity<?> sampleMethodWithMap(@RequestParam Map<String, String> queryParams);

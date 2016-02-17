@@ -15,7 +15,7 @@ class FastLinkTemplate {
 		PATH_SEGMENT {
 			@Override
 			public boolean isAllowed(int c) {
-				return isPchar(c);
+				return isPchar(c) || '%' == c;
 			}
 		},
 		QUERY_PARAM {
