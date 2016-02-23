@@ -4,7 +4,9 @@ import org.springframework.core.convert.ConversionService;
 import org.springframework.core.convert.TypeDescriptor;
 import org.springframework.format.support.DefaultFormattingConversionService;
 import org.springframework.hateoas.mvc.FastLinks.LastInvocationHolder;
+import org.springframework.web.util.UriUtils;
 
+import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.util.Collection;
 import java.util.Iterator;
@@ -17,6 +19,11 @@ class FastLinkTemplate {
 			public boolean isAllowed(int c) {
 				return isPchar(c) || '%' == c;
 			}
+
+			@Override
+			protected String doEncode(String value) throws UnsupportedEncodingException {
+				return UriUtils.encodePathSegment(value, "UTF-8");
+			}
 		},
 		QUERY_PARAM {
 			@Override
@@ -27,9 +34,22 @@ class FastLinkTemplate {
 					return isPchar(c) || '/' == c || '?' == c || '%' == c;
 				}
 			}
+			@Override
+			protected String doEncode(String value) throws UnsupportedEncodingException {
+				return UriUtils.encodeQueryParam(value, "UTF-8");
+			}
 		};
 
 		protected abstract boolean isAllowed(int c);
+		protected abstract String doEncode(String value) throws UnsupportedEncodingException;
+
+		public String encode(String input) {
+			try {
+				return doEncode(input);
+			} catch (UnsupportedEncodingException e) {
+				throw new IllegalStateException(e);
+			}
+		}
 
 		public boolean isAllowed(String input) {
 			for (int i = 0; i < input.length(); i++) {
@@ -205,14 +225,7 @@ class FastLinkTemplate {
 			}
 
 			String result = (String) CONVERSION_SERVICE.convert(value, parameterTypeDescriptor, STRING_DESCRIPTOR);
-			verify(result);
-			return result;
-		}
-
-		protected void verify(String value) {
-			if (!type.isAllowed(value)) {
-				throw new IllegalArgumentException("The value contains not allowed characters: " + value);
-			}
+			return type.encode(result);
 		}
 	}
 

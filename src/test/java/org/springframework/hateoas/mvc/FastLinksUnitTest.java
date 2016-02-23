@@ -18,7 +18,6 @@ package org.springframework.hateoas.mvc;
 import org.joda.time.DateMidnight;
 import org.joda.time.DateTime;
 import org.joda.time.LocalDate;
-import org.joda.time.format.ISODateTimeFormat;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -36,6 +35,8 @@ import java.io.UnsupportedEncodingException;
 import java.util.*;
 
 import static org.hamcrest.Matchers.endsWith;
+import static org.joda.time.format.ISODateTimeFormat.date;
+import static org.joda.time.format.ISODateTimeFormat.dateTime;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 import static org.springframework.hateoas.mvc.ControllerLinkBuilder.methodOn;
@@ -54,42 +55,91 @@ public class FastLinksUnitTest extends TestUtils {
 	public void dateMidnightParams() {
 		DateMidnight now = new DateMidnight();
 		String link = FastLinks.linkTo(methodOn(SampleController.class).sampleMethodDate(now));
-		assertThat(link, endsWith("/sample/" + ISODateTimeFormat.date().print(now)));
+		assertThat(link, endsWith("/sample/" + date().print(now)));
 	}
 
 	@Test
 	public void dateDateTimeParams() {
 		DateTime now = new DateTime();
 		String link = FastLinks.linkTo(methodOn(SampleController.class).sampleMethodDate(now));
-		assertThat(link, endsWith("/sample/" + ISODateTimeFormat.date().print(now)));
+		System.out.println(link);
+		assertThat(link, endsWith("/sample/" + date().print(now)));
 	}
 
 	@Test
 	public void dateDateParams() {
 		Date now = new Date();
 		String link = FastLinks.linkTo(methodOn(SampleController.class).sampleMethodDate(now));
-		assertThat(link, endsWith("/sample/" + ISODateTimeFormat.date().print(new DateTime(now))));
+		assertThat(link, endsWith("/sample/" + date().print(new DateTime(now))));
 	}
 
 	@Test
 	public void dateDateLocalParams() {
 		LocalDate now = new LocalDate();
 		String link = FastLinks.linkTo(methodOn(SampleController.class).sampleMethodDate(now));
-		assertThat(link, endsWith("/sample/" + ISODateTimeFormat.date().print(now)));
+		assertThat(link, endsWith("/sample/" + date().print(now)));
 	}
 
 	@Test
 	public void timeDateTimeParams() {
 		DateTime now = new DateTime();
 		String link = FastLinks.linkTo(methodOn(SampleController.class).sampleMethodTime(now));
-		assertThat(link, endsWith("/sample/" + ISODateTimeFormat.dateTime().print(now)));
+		assertThat(link, endsWith("/sample/" + dateTime().print(now)));
 	}
 
 	@Test
 	public void timeDateParams() {
 		Date now = new Date();
 		String link = FastLinks.linkTo(methodOn(SampleController.class).sampleMethodTime(now));
-		assertThat(link, endsWith("/sample/" + ISODateTimeFormat.dateTime().print(new DateTime(now))));
+		assertThat(link, endsWith("/sample/" + dateTime().print(new DateTime(now))));
+	}
+
+
+	@Test
+	public void dateMidnightQueryParams() {
+		DateMidnight now = new DateMidnight();
+		String link = FastLinks.linkTo(methodOn(SampleController.class).dateQueryParam(now));
+		assertThat(link, endsWith("/sample/date?date=" + encodePlus(date().print(now))));
+	}
+
+	@Test
+	public void dateDateTimeQueryParams() {
+		DateTime now = new DateTime();
+		String link = FastLinks.linkTo(methodOn(SampleController.class).dateQueryParam(now));
+		System.out.println(link);
+		assertThat(link, endsWith("/sample/date?date=" + encodePlus(date().print(now))));
+	}
+
+	@Test
+	public void dateDateQueryParams() {
+		Date now = new Date();
+		String link = FastLinks.linkTo(methodOn(SampleController.class).dateQueryParam(now));
+		assertThat(link, endsWith("/sample/date?date=" + encodePlus(date().print(new DateTime(now)))));
+	}
+
+	@Test
+	public void dateDateLocalQueryParams() {
+		LocalDate now = new LocalDate();
+		String link = FastLinks.linkTo(methodOn(SampleController.class).dateQueryParam(now));
+		assertThat(link, endsWith("/sample/date?date=" + encodePlus(date().print(now))));
+	}
+
+	@Test
+	public void timeDateTimeQueryParams() {
+		DateTime now = new DateTime();
+		String link = FastLinks.linkTo(methodOn(SampleController.class).timeQueryParam(now));
+		assertThat(link, endsWith("/sample/time?time=" + encodePlus(dateTime().print(now))));
+	}
+
+	@Test
+	public void timeDateQueryParams() {
+		Date now = new Date();
+		String link = FastLinks.linkTo(methodOn(SampleController.class).timeQueryParam(now));
+		assertThat(link, endsWith("/sample/time?time=" + encodePlus(dateTime().print(new DateTime(now)))));
+	}
+
+	private String encodePlus(String input) {
+		return input.replace("+", "%2B");
 	}
 
 	@Test
@@ -231,6 +281,26 @@ public class FastLinksUnitTest extends TestUtils {
 
 		@RequestMapping("/sample/{time}")
 		HttpEntity<?> sampleMethodTime(@PathVariable("time") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) DateTime time);
+
+
+		@RequestMapping("/sample/date")
+		HttpEntity<?> dateQueryParam(@RequestParam("date") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) DateMidnight time);
+
+		@RequestMapping("/sample/date")
+		HttpEntity<?> dateQueryParam(@RequestParam("date") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) DateTime time);
+
+		@RequestMapping("/sample/date")
+		HttpEntity<?> dateQueryParam(@RequestParam("date") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate time);
+
+		@RequestMapping("/sample/date")
+		HttpEntity<?> dateQueryParam(@RequestParam("date") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) Date time);
+
+		@RequestMapping("/sample/time")
+		HttpEntity<?> timeQueryParam(@RequestParam("time") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Date time);
+
+		@RequestMapping("/sample/time")
+		HttpEntity<?> timeQueryParam(@RequestParam("time") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) DateTime time);
+
 
 		@RequestMapping("/sample/{value}")
 		HttpEntity<?> sampleMethodEnum(@PathVariable("value") TestEnum value, @RequestParam("value2") TestEnum value2);
